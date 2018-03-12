@@ -51,9 +51,9 @@ public class Generate extends AbstractGenerate {
     public void reportError(Token token, String message) throws CompilationException {
         String final_message = "";
         if (token != null)
-            final_message = "Error: " + message + " at line " + token.lineNumber;
+            final_message = "\"Error: " + message + " at line " + token.lineNumber + "\"";
         else
-            final_message = "Error: " + message;
+            final_message = "\"Error: " + message + "\"";
 
         throw new CompilationException(final_message);
     }
