@@ -307,6 +307,10 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
             nextToken = lex.getNextToken();
         }
         else {
+            if (nextToken.symbol == Token.eofSymbol) {
+                myGenerate.reportError(nextToken,
+                        "unexpected end of file, expected " + Token.getName(symbol));
+            }
             myGenerate.reportError(nextToken, "unexpected symbol '"
                     + Token.getName(nextToken.symbol) + "', expected " + Token.getName(symbol));
         }
