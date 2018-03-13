@@ -51,7 +51,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
             switch (nextToken.symbol) {
                 case Token.identifier: {
                     // Must be an assignment statement
-                    // @Todo: AssignmentStatement
+                    AssignmentStatement();
                 }
                 break;
                 case Token.ifSymbol: {
@@ -67,14 +67,15 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
                 case Token.doSymbol: {
                     // Do until loop
                     UntilStatement();
-                } break;
+                }
+                break;
                 case Token.callSymbol: {
                     // Procedure call!
                     CallStatement();
                 }
                 break;
                 case Token.forSymbol: {
-                    // @Todo: This needs AssignmentStatements to work
+                    ForStatement();
                 }
                 break;
                 default: {
@@ -100,6 +101,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
         if(IsReservedWord(nextToken.text)) {
             myGenerate.reportError(nextToken, "'" + nextToken.text + "' is reserved and cannot be used as an identifier");
         }
+        myGenerate.insertToken(nextToken);
 
         Token op = lex.getNextToken();
         Token b = lex.getNextToken();
@@ -124,7 +126,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
             }
             break;
         }
-
+        myGenerate.finishNonterminal("AssignmentStatement");
     }
 
     // @Incomplete
@@ -216,6 +218,91 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
         myGenerate.insertToken(nextToken);
 
         myGenerate.finishNonterminal("IfStatement");
+    }
+
+    /**
+      This will try to parse a for loop statement and report any errors it encounters
+    */
+    public void ForStatement() throws CompilationException, IOException {
+        myGenerate.commenceNonterminal("ForStatement");
+        // Already know a for token is present
+        myGenerate.insertToken(nextToken);
+
+        // Look for the opening parenthesis, error if not found
+        nextToken = lex.getNextToken();
+        if (nextToken.symbol != Token.leftParenthesis) {
+            myGenerate.reportError(nextToken, "missing '(' in for loop declaration");
+        }
+        myGenerate.insertToken(nextToken);
+
+        // An assignment statement must come next
+        nextToken = lex.getNextToken();
+        AssignmentStatement();
+
+        // Check for the closing semi-colon
+        nextToken = lex.getNextToken();
+        if (nextToken.symbol != Token.semicolonSymbol) {
+            if (nextToken.symbol == Token.colonSymbol) {
+                myGenerate.reportError(nextToken, "expected ';' after assignment in for loop declaration, did you use a colon instead?");
+            }
+            else if(nextToken.symbol == Token.identifier) {
+                myGenerate.reportError(nextToken, "unexpected identifier '" + nextToken.text + "' in for loop declaration, are you missing a semi-colon?");
+            }
+            else {
+                myGenerate.reportError(nextToken, "unexpected symbol '" + nextToken.text + "' in for loop declaration");
+            }
+        }
+        myGenerate.insertToken(nextToken);
+
+        // Then after the first semi-colon, a condition must follow
+        Condition();
+
+        // Once again check for the closing semi-colon
+        nextToken = lex.getNextToken();
+        if (nextToken.symbol != Token.semicolonSymbol) {
+            if (nextToken.symbol == Token.colonSymbol) {
+                myGenerate.reportError(nextToken, "expected ';' after assignment in for loop declaration, did you use a colon instead?");
+            }
+            else if(nextToken.symbol == Token.identifier) {
+                myGenerate.reportError(nextToken, "unexpected identifier '" + nextToken.text + "' in for loop declaration, are you missing a semi-colon?");
+            }
+            else {
+                myGenerate.reportError(nextToken, "unexpected symbol '" + nextToken.text + "' in for loop declaration");
+            }
+        }
+        myGenerate.insertToken(nextToken);
+
+        // Finally, another assignment statement should be present to finish the declaration
+        lex.getNextToken();
+        AssignmentStatement();
+
+        nextToken = lex.getNextToken();
+        if (nextToken.symbol != Token.rightParenthesis) {
+            myGenerate.reportError(nextToken, "missing ')' at the end of for loop declaration");
+        }
+        myGenerate.insertToken(nextToken);
+
+        nextToken = lex.getNextToken();
+        if (nextToken.symbol != Token.doSymbol) {
+            myGenerate.reportError(nextToken, "expected 'do' symbol after for loop declaration");
+        }
+        myGenerate.insertToken(nextToken);
+
+        StatementList();
+
+        // The 'end' symbol should already be stored in nextToken from the StatementList
+        if (nextToken.symbol != Token.endSymbol) {
+            myGenerate.reportError(nextToken, "expected 'end loop' at the end of for loop");
+        }
+        myGenerate.insertToken(nextToken);
+
+        nextToken = lex.getNextToken();
+        if (nextToken.symbol != Token.loopSymbol) {
+            myGenerate.reportError(nextToken, "expected 'end loop' at the end of for loop");
+        }
+        myGenerate.insertToken(nextToken);
+
+        myGenerate.finishNonterminal("ForStatement");
     }
 
     /**
