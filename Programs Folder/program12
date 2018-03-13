@@ -1,14 +1,22 @@
 begin
-call get(x1);
-call get(x2);
-for (x1 := "Hello"; x3 /= "World"; x3 := "World")
-do
-    call put(x3);
-    call put(x1)
-end loop;
-text := "The answer is: ";
-call put(text);
-call put(x3)
+a := "Hello World";
+b := 1;
+c := b * 10;
+d := ((a + b) * c) / 10 - b;
+if d = 10
+then
+    while b < 15
+    loop
+        call proc(a, b, c, d)
+    end loop
+else
+    do
+        for (u := (a + b) / c; u > 3; u := u - 1)
+        do
+            call otherproc(a, b)
+        end loop
+    until a /= "Hello World"
+end if
 end
 
 

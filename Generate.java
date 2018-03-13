@@ -13,17 +13,19 @@ public class Generate extends AbstractGenerate {
 
     public void insertToken(Token token) {
         for (int i = 0; i < indent; i++) { System.out.print(" "); }
-        if (token.symbol == Token.identifier) {
-            System.out.println("rggTOKEN IDENTIFIER '" + token.text + "' on line " + token.lineNumber);
-        }
-        else if (token.symbol == Token.numberConstant) {
-            System.out.println("rggTOKEN NUMBER '" + token.text + "' on line " + token.lineNumber);
-        }
-        else if(token.symbol == Token.stringConstant) {
-            System.out.println("rggTOKEN STRING '" + token.text + "' on line " + token.lineNumber);
-        }
-        else {
-            System.out.println("rggTOKEN " + token.text + " on line " + token.lineNumber);
+        switch (token.symbol) {
+            case Token.identifier:
+            case Token.numberConstant:
+            case Token.stringConstant: {
+                System.out.println("rggTOKEN " + Token.getName(token.symbol) + " '"
+                        + token.text + "' on line " + token.lineNumber);
+            }
+            break;
+            default: {
+                System.out.println("rggTOKEN " +
+                        Token.getName(token.symbol) + " on line " + token.lineNumber);
+            }
+            break;
         }
     }
 

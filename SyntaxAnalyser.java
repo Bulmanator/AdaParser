@@ -32,15 +32,15 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
             myGenerate.filename = actual;
         }
 
+        myGenerate.commenceNonterminal("StatementPart");
         // Accept the 'begin' symbol terminal
         acceptTerminal(Token.beginSymbol);
         // Start a StatementPart non-terminal
-        myGenerate.commenceNonterminal("StatementPart");
         // Try to read a StatementList as it always follows a StatementPart
         StatementList();
 
-        myGenerate.finishNonterminal("StatementPart");
         acceptTerminal(Token.endSymbol);
+        myGenerate.finishNonterminal("StatementPart");
     }
 
     /**
@@ -82,7 +82,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
             break;
             case Token.callSymbol: {
                 // Procedure call!
-                CallStatement();
+                ProcedureStatement();
             }
             break;
             case Token.forSymbol: {
@@ -114,7 +114,6 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
         myGenerate.finishNonterminal("AssignmentStatement");
     }
 
-    // @Todo
     public void Factor() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("Factor");
         switch (nextToken.symbol) {
@@ -142,9 +141,9 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
     public void Term() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("Term");
         Factor();
-        if (nextToken.symbol == Token.timesSymbol || nextToken.symbol == Token.divideSymbol) {
+        while (nextToken.symbol == Token.timesSymbol || nextToken.symbol == Token.divideSymbol) {
             acceptTerminal(nextToken.symbol);
-            Factor();
+            Term();
         }
         myGenerate.finishNonterminal("Term");
     }
@@ -152,7 +151,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
     public void Expression() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("Expression");
         Term();
-        if (nextToken.symbol == Token.plusSymbol || nextToken.symbol == Token.minusSymbol) {
+        while (nextToken.symbol == Token.plusSymbol || nextToken.symbol == Token.minusSymbol) {
             acceptTerminal(nextToken.symbol);
             Term();
         }
@@ -279,14 +278,14 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
         myGenerate.finishNonterminal("ConditionalOperator");
     }
 
-    public void CallStatement() throws CompilationException, IOException {
-        myGenerate.commenceNonterminal("CallStatement");
+    public void ProcedureStatement() throws CompilationException, IOException {
+        myGenerate.commenceNonterminal("ProcedureStatement");
         acceptTerminal(Token.callSymbol);
         acceptTerminal(Token.identifier);
         acceptTerminal(Token.leftParenthesis);
         ArgumentList();
         acceptTerminal(Token.rightParenthesis);
-        myGenerate.finishNonterminal("CallStatement");
+        myGenerate.finishNonterminal("ProcedureStatement");
     }
 
     public void ArgumentList() throws CompilationException, IOException {
@@ -311,14 +310,5 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
             myGenerate.reportError(nextToken, "unexpected symbol '"
                     + Token.getName(nextToken.symbol) + "', expected " + Token.getName(symbol));
         }
-    }
-
-    private boolean IsReservedWord(String word) {
-        for (int i = 0; i < reserved_words.length; i++) {
-            if (reserved_words[i].equals(word)) {
-                return true;
-            }
-        }
-        return false;
     }
 }
