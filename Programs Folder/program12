@@ -1,0 +1,15 @@
+begin
+call get(x1);
+call get(x2);
+for (x3 := "Hello"; x3 /= "World"; x3 := "World")
+do
+    call put(x3);
+    call put(x1)
+end loop;
+text := "The answer is: ";
+call put(text);
+call put(x3)
+end
+
+
+
