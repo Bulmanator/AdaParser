@@ -1,18 +1,10 @@
 
 begin
-call get(x1) ;			-- input number
-while x1 /= 0 loop
-    if x1 = 10 then
-        while x2 < 10 loop
-            call put(x2)
-        end loop;
-        call put(x1)
-    else
-        call put(x1)
-    end if
-end loop ;
-text := "The answer is " ;
-call put(text);
-call put(x1) -- output factorial
+if x = 10 then
+    if x = 11 then
+        call heyo(x)
+    end if;
+    guesswhat := guesswhat * (1 - 15)
+end if 
 end
 
