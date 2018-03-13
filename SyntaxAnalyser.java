@@ -1,8 +1,10 @@
 import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 
 public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
 
+    public String filename;
     // List of reserved words to prevent an identifier using them
     private String[] reserved_words = {
         "begin", "call", "do", "else", "end",
@@ -16,6 +18,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
       @param filename The name of the file to analyse
     */
     public SyntaxAnalyser(String filename) throws IOException {
+        this.filename = filename;
         lex = new LexicalAnalyser(filename);
     }
 
@@ -23,134 +26,113 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
       Attepmts to parse the entire file catching and reporting any errors it encounters
     */
     public void _statementPart_() throws IOException, CompilationException {
-        if (nextToken.symbol != Token.beginSymbol) {
-            myGenerate.reportError(nextToken, "expected 'begin' symbol");
+        // @Debug!!
+        {
+            String actual = filename.substring(filename.lastIndexOf(File.separator) + 1, filename.length());
+            myGenerate.filename = actual;
         }
-        myGenerate.insertToken(nextToken);
+
+        // Accept the 'begin' symbol terminal
+        acceptTerminal(Token.beginSymbol);
+        // Start a StatementPart non-terminal
         myGenerate.commenceNonterminal("StatementPart");
+        // Try to read a StatementList as it always follows a StatementPart
         StatementList();
+
         myGenerate.finishNonterminal("StatementPart");
-        if (nextToken == null) {
-            myGenerate.reportError(null, "unexpected end of file");
-        }
-        if (nextToken.symbol != Token.endSymbol) {
-            myGenerate.reportError(nextToken, "expected 'end' symbol");
-        }
-        myGenerate.insertToken(nextToken);
+        acceptTerminal(Token.endSymbol);
     }
 
     /**
       Attempts to parse a StatementList, reporting any errors it encounters
         StatementList ::= Statement | StatementList; Statement
     */
-    public void StatementList() throws IOException, CompilationException {
+    public void StatementList() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("StatementList");
-        do {
-            nextToken = lex.getNextToken();
-            myGenerate.commenceNonterminal("Statement");
-            switch (nextToken.symbol) {
-                case Token.identifier: {
-                    // Must be an assignment statement
-                    AssignmentStatement();
-                }
-                break;
-                case Token.ifSymbol: {
-                    // If statement!
-                    IfStatement();
-                }
-                break;
-                case Token.whileSymbol: {
-                    // While loop!
-                    WhileStatement();
-                }
-                break;
-                case Token.doSymbol: {
-                    // Do until loop
-                    UntilStatement();
-                }
-                break;
-                case Token.callSymbol: {
-                    // Procedure call!
-                    CallStatement();
-                }
-                break;
-                case Token.forSymbol: {
-                    ForStatement();
-                }
-                break;
-                default: {
-                    myGenerate.reportError(nextToken, "unexpected symbol \"" + nextToken.text + "\"");
-                }
-                break;
-            }
-            nextToken = lex.getNextToken();
-            myGenerate.finishNonterminal("Statement");
-            if (nextToken.symbol == Token.semicolonSymbol) {
-                myGenerate.insertToken(nextToken);
-            }
-        } while (nextToken.symbol == Token.semicolonSymbol);
-
-        // Statement list done!
+        Statement();
+        while (nextToken.symbol == Token.semicolonSymbol) {
+            acceptTerminal(Token.semicolonSymbol);
+            Statement();
+        }
         myGenerate.finishNonterminal("StatementList");
     }
 
-    // @Incomplete!
+    private void Statement() throws CompilationException, IOException {
+        myGenerate.commenceNonterminal("Statement");
+        switch (nextToken.symbol) {
+            case Token.identifier: {
+                // Must be an assignment statement
+                AssignmentStatement();
+            }
+            break;
+            case Token.ifSymbol: {
+                // If statement!
+                IfStatement();
+            }
+            break;
+            case Token.whileSymbol: {
+                // While loop!
+                WhileStatement();
+            }
+            break;
+            case Token.doSymbol: {
+                // Do until loop!
+                UntilStatement();
+            }
+            break;
+            case Token.callSymbol: {
+                // Procedure call!
+                CallStatement();
+            }
+            break;
+            case Token.forSymbol: {
+                // For loop!
+                ForStatement();
+            }
+            break;
+            default: {
+                // Any other symbol is unexpected, thus should cause an error
+                myGenerate.reportError(nextToken, "unexpected symbol '" + Token.getName(nextToken.symbol)
+                        + "', expected identifier, if, while, do, call or for");
+            }
+            break;
+        }
+        myGenerate.finishNonterminal("Statement");
+    }
+
+
     public void AssignmentStatement() throws IOException, CompilationException {
         myGenerate.commenceNonterminal("AssignmentStatement");
-
-        if(IsReservedWord(nextToken.text)) {
-            myGenerate.reportError(nextToken, "'" + nextToken.text + "' is reserved and cannot be used as an identifier");
+        acceptTerminal(Token.identifier);
+        acceptTerminal(Token.becomesSymbol);
+        if (nextToken.symbol == Token.stringConstant) {
+            acceptTerminal(Token.stringConstant);
         }
-        myGenerate.insertToken(nextToken);
-
-        Token op = lex.getNextToken();
-        Token b = lex.getNextToken();
-
-        if (op.symbol != Token.becomesSymbol) {
-            if (op.symbol == Token.equalSymbol) {
-                myGenerate.reportError(op, "expected ':=' for assignment, did you use '=' instead?");
-            }
-            myGenerate.reportError(op, "unexpected symbol '" + op.text + "' during assignment");
-        }
-        myGenerate.insertToken(op);
-
-        switch (b.symbol) {
-            case Token.identifier:
-            case Token.numberConstant:
-            case Token.leftParenthesis: {
-                Expression();
-            }
-            break;
-            case Token.stringConstant: {
-                myGenerate.insertToken(b);
-            }
-            break;
+        else {
+            Expression();
         }
         myGenerate.finishNonterminal("AssignmentStatement");
     }
 
-    // @Incomplete
-    public void Factor(Token token) throws CompilationException, IOException {
+    // @Todo
+    public void Factor() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("Factor");
-        switch (token.symbol) {
+        switch (nextToken.symbol) {
             case Token.identifier:
             case Token.numberConstant: {
-                // Just an identifier or number, so insert and be done
-                myGenerate.insertToken(token);
+                acceptTerminal(nextToken.symbol);
             }
             break;
             case Token.leftParenthesis: {
-                myGenerate.insertToken(token);
+                acceptTerminal(Token.leftParenthesis);
                 Expression();
-                nextToken = lex.getNextToken();
-                if (nextToken.symbol != Token.rightParenthesis) {
-                    myGenerate.reportError(nextToken, "missing ')' in expression");
-                }
-                myGenerate.insertToken(nextToken);
+                acceptTerminal(Token.rightParenthesis);
             }
             break;
             default: {
-                myGenerate.reportError(token, "unexpected symbol '" + token.text + "'");
+                myGenerate.reportError(nextToken, "unexpected symbol '"
+                        + Token.getName(nextToken.symbol) +
+                        "', expected identifier, numberConstant or (expression)");
             }
             break;
         }
@@ -159,17 +141,21 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
 
     public void Term() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("Term");
-        Token a = lex.getNextToken();
-        nextToken = lex.getNextToken();
-
-        // @Todo: Implement Term handling!
-
+        Factor();
+        if (nextToken.symbol == Token.timesSymbol || nextToken.symbol == Token.divideSymbol) {
+            acceptTerminal(nextToken.symbol);
+            Factor();
+        }
         myGenerate.finishNonterminal("Term");
     }
 
-    public void Expression() {
+    public void Expression() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("Expression");
-
+        Term();
+        if (nextToken.symbol == Token.plusSymbol || nextToken.symbol == Token.minusSymbol) {
+            acceptTerminal(nextToken.symbol);
+            Term();
+        }
         myGenerate.finishNonterminal("Expression");
     }
 
@@ -178,45 +164,18 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
     */
     public void IfStatement() throws IOException, CompilationException {
         myGenerate.commenceNonterminal("IfStatement");
-        // If
-        myGenerate.insertToken(nextToken);
-        // Followed By Condition
+        acceptTerminal(Token.ifSymbol);
         Condition();
-
-        // Followed by Then
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.thenSymbol) {
-            myGenerate.reportError(nextToken, "'then' was expected after 'if'");
-        }
-
-        myGenerate.insertToken(nextToken);
-
-        // Followed by StatementList
+        acceptTerminal(Token.thenSymbol);
         StatementList();
 
-        // @Todo: Else
-        //nextToken = lex.getNextToken();
-        // This could be the case if we hit EOF while doing the statement list
-        if (nextToken == null) {
-            myGenerate.reportError(null, "unexpected end of file");
-        }
-        else if(nextToken.symbol == Token.elseSymbol) {
-            myGenerate.insertToken(nextToken);
+        if (nextToken.symbol == Token.elseSymbol) {
+            acceptTerminal(Token.elseSymbol);
             StatementList();
         }
 
-        if (nextToken.symbol != Token.endSymbol) {
-            myGenerate.reportError(nextToken, "'end if' was expected after 'then'");
-        }
-
-        myGenerate.insertToken(nextToken);
-
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.ifSymbol) {
-            myGenerate.reportError(nextToken, "'end if' was expected after 'then'");
-        }
-        myGenerate.insertToken(nextToken);
-
+        acceptTerminal(Token.endSymbol);
+        acceptTerminal(Token.ifSymbol);
         myGenerate.finishNonterminal("IfStatement");
     }
 
@@ -225,83 +184,18 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
     */
     public void ForStatement() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("ForStatement");
-        // Already know a for token is present
-        myGenerate.insertToken(nextToken);
-
-        // Look for the opening parenthesis, error if not found
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.leftParenthesis) {
-            myGenerate.reportError(nextToken, "missing '(' in for loop declaration");
-        }
-        myGenerate.insertToken(nextToken);
-
-        // An assignment statement must come next
-        nextToken = lex.getNextToken();
+        acceptTerminal(Token.forSymbol);
+        acceptTerminal(Token.leftParenthesis);
         AssignmentStatement();
-
-        // Check for the closing semi-colon
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.semicolonSymbol) {
-            if (nextToken.symbol == Token.colonSymbol) {
-                myGenerate.reportError(nextToken, "expected ';' after assignment in for loop declaration, did you use a colon instead?");
-            }
-            else if(nextToken.symbol == Token.identifier) {
-                myGenerate.reportError(nextToken, "unexpected identifier '" + nextToken.text + "' in for loop declaration, are you missing a semi-colon?");
-            }
-            else {
-                myGenerate.reportError(nextToken, "unexpected symbol '" + nextToken.text + "' in for loop declaration");
-            }
-        }
-        myGenerate.insertToken(nextToken);
-
-        // Then after the first semi-colon, a condition must follow
+        acceptTerminal(Token.semicolonSymbol);
         Condition();
-
-        // Once again check for the closing semi-colon
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.semicolonSymbol) {
-            if (nextToken.symbol == Token.colonSymbol) {
-                myGenerate.reportError(nextToken, "expected ';' after assignment in for loop declaration, did you use a colon instead?");
-            }
-            else if(nextToken.symbol == Token.identifier) {
-                myGenerate.reportError(nextToken, "unexpected identifier '" + nextToken.text + "' in for loop declaration, are you missing a semi-colon?");
-            }
-            else {
-                myGenerate.reportError(nextToken, "unexpected symbol '" + nextToken.text + "' in for loop declaration");
-            }
-        }
-        myGenerate.insertToken(nextToken);
-
-        // Finally, another assignment statement should be present to finish the declaration
-        lex.getNextToken();
+        acceptTerminal(Token.semicolonSymbol);
         AssignmentStatement();
-
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.rightParenthesis) {
-            myGenerate.reportError(nextToken, "missing ')' at the end of for loop declaration");
-        }
-        myGenerate.insertToken(nextToken);
-
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.doSymbol) {
-            myGenerate.reportError(nextToken, "expected 'do' symbol after for loop declaration");
-        }
-        myGenerate.insertToken(nextToken);
-
+        acceptTerminal(Token.rightParenthesis);
+        acceptTerminal(Token.doSymbol);
         StatementList();
-
-        // The 'end' symbol should already be stored in nextToken from the StatementList
-        if (nextToken.symbol != Token.endSymbol) {
-            myGenerate.reportError(nextToken, "expected 'end loop' at the end of for loop");
-        }
-        myGenerate.insertToken(nextToken);
-
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.loopSymbol) {
-            myGenerate.reportError(nextToken, "expected 'end loop' at the end of for loop");
-        }
-        myGenerate.insertToken(nextToken);
-
+        acceptTerminal(Token.endSymbol);
+        acceptTerminal(Token.loopSymbol);
         myGenerate.finishNonterminal("ForStatement");
     }
 
@@ -310,37 +204,12 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
     */
     public void WhileStatement() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("WhileStatement");
-        // Insert the while token
-        myGenerate.insertToken(nextToken);
-
-        // Condition
+        acceptTerminal(Token.whileSymbol);
         Condition();
-
-        // The while condition must be followed by a loop keyword
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.loopSymbol) {
-            myGenerate.reportError(nextToken, "expected 'loop' symbol after 'while'");
-        }
-
-        // Insert the loop token
-        myGenerate.insertToken(nextToken);
-
-        // A StatementList then proceeds the loop token
+        acceptTerminal(Token.loopSymbol);
         StatementList();
-
-        // An 'end loop' statement is expected at the end
-        // The 'end' token will already be in nextToken as it was used to leave the StatementList
-        if (nextToken.symbol != Token.endSymbol) {
-            System.err.println("end loop after while error: " + nextToken);
-            myGenerate.reportError(nextToken, "expected 'end loop' symbol after 'while'");
-        }
-        myGenerate.insertToken(nextToken);
-
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.loopSymbol) {
-            myGenerate.reportError(nextToken, "expected 'end loop' symbol after 'while'");
-        }
-        myGenerate.insertToken(nextToken);
+        acceptTerminal(Token.endSymbol);
+        acceptTerminal(Token.loopSymbol);
         myGenerate.finishNonterminal("WhileStatement");
     }
 
@@ -349,21 +218,10 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
     */
     public void UntilStatement() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("UntilStatement");
-        // Insert the 'do' token
-        myGenerate.insertToken(nextToken);
-
-        // It is then followed by a StatementList
+        acceptTerminal(Token.doSymbol);
         StatementList();
-
-        // The until symbol will already be stored in nextToken as it was used to
-        // leave the StatementList
-        if (nextToken.symbol != Token.untilSymbol) {
-            myGenerate.reportError(nextToken, "expected 'until' symbol after 'do'");
-        }
-
-        // The condition then follows the 'until' keyword
+        acceptTerminal(Token.untilSymbol);
         Condition();
-
         myGenerate.finishNonterminal("UntilStatement");
     }
 
@@ -375,116 +233,84 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
      */
     public void Condition() throws IOException, CompilationException {
         myGenerate.commenceNonterminal("Condition");
-        Token a = lex.getNextToken();
-        Token op = lex.getNextToken();
-        Token b = lex.getNextToken();
-
-        // The first identifier for the condition statement
-        if (a.symbol != Token.identifier) {
-            myGenerate.reportError(a, "identifier expected as leading part of conditional");
+        acceptTerminal(Token.identifier);
+        ConditionalOperator();
+        switch (nextToken.symbol) {
+            case Token.identifier: {
+                acceptTerminal(Token.identifier);
+            }
+            break;
+            case Token.numberConstant: {
+                acceptTerminal(Token.numberConstant);
+            }
+            break;
+            case Token.stringConstant: {
+                acceptTerminal(Token.stringConstant);
+            }
+            break;
+            default: {
+                myGenerate.reportError(nextToken, "unexpected symbol '"
+                            + Token.getName(nextToken.symbol)
+                            + "', expected identifier, numberConstant or stringConstant");
+            }
+            break;
         }
-        myGenerate.insertToken(a);
+        myGenerate.finishNonterminal("Condition");
+    }
 
-        // The conditional operator
-        switch (op.symbol) {
-            case Token.greaterEqualSymbol:
+    private void ConditionalOperator() throws CompilationException, IOException {
+        myGenerate.commenceNonterminal("ConditionalOperator");
+        switch (nextToken.symbol) {
             case Token.greaterThanSymbol:
+            case Token.greaterEqualSymbol:
             case Token.equalSymbol:
             case Token.notEqualSymbol:
-            case Token.lessEqualSymbol:
-            case Token.lessThanSymbol: {
-                // Don't do anything as this is valid
+            case Token.lessThanSymbol:
+            case Token.lessEqualSymbol: {
+                acceptTerminal(nextToken.symbol);
             }
             break;
             default: {
-                myGenerate.reportError(op, "'" + op.text + "' was not a valid conditional operator");
+                myGenerate.reportError(nextToken, "unexpected symbol '" + Token.getName(nextToken.symbol)
+                        + "', expected greaterThan, greaterEqual, equal, notEqual, lessThan or lessEqual");
             }
             break;
         }
-        myGenerate.insertToken(op);
-
-
-        // The second identifier for the condition statement
-        switch (b.symbol) {
-            case Token.identifier:
-            case Token.numberConstant:
-            case Token.stringConstant: {
-                // Once again don't do anything as this is valid!
-            }
-            break;
-            default: {
-                myGenerate.reportError(b, "expected identifier, number literal or string literal in conditional");
-            }
-            break;
-        }
-        myGenerate.insertToken(b);
-
-        myGenerate.finishNonterminal("Condition");
+        myGenerate.finishNonterminal("ConditionalOperator");
     }
 
     public void CallStatement() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("CallStatement");
-        // Insert the 'call' token
-        myGenerate.insertToken(nextToken);
-
-        // Make sure the next token is an identifer and insert it
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.identifier) {
-            myGenerate.reportError(nextToken, "identifer was expected for procedure call");
-        }
-        myGenerate.insertToken(nextToken);
-
-        // Check the left parenthesis is present
-        nextToken = lex.getNextToken();
-        if (nextToken.symbol != Token.leftParenthesis) {
-            myGenerate.reportError(nextToken, "'(' missing from procedure call");
-        }
-        myGenerate.insertToken(nextToken);
-
-        // An argument list should then follow
+        acceptTerminal(Token.callSymbol);
+        acceptTerminal(Token.identifier);
+        acceptTerminal(Token.leftParenthesis);
         ArgumentList();
-
-        // Finally, check the right parenthesis is present
-        // nextToken should already contain it as it was used to get out of the ArgumentList
-        if (nextToken.symbol != Token.rightParenthesis) {
-            myGenerate.reportError(nextToken, "')' missing from procedure call");
-        }
-        myGenerate.insertToken(nextToken);
-
+        acceptTerminal(Token.rightParenthesis);
         myGenerate.finishNonterminal("CallStatement");
     }
 
     public void ArgumentList() throws CompilationException, IOException {
         myGenerate.commenceNonterminal("ArgumentList");
-        do {
-            nextToken = lex.getNextToken();
-            if (nextToken.symbol != Token.identifier) {
-                myGenerate.reportError(nextToken, "expected identifer in argument list");
-            }
-            myGenerate.insertToken(nextToken);
-
-            nextToken = lex.getNextToken();
-            if (nextToken.symbol == Token.commaSymbol) {
-                myGenerate.insertToken(nextToken);
-            }
-        }
-        while (nextToken.symbol == Token.commaSymbol);
-
-        if (nextToken.symbol == Token.identifier) {
-            myGenerate.reportError(nextToken, "unexpected identifer '" + nextToken.text + "' during procedure call, did you miss a comma?");
+        acceptTerminal(Token.identifier);
+        while (nextToken.symbol == Token.commaSymbol) {
+            acceptTerminal(Token.commaSymbol);
+            acceptTerminal(Token.identifier);
         }
         myGenerate.finishNonterminal("ArgumentList");
     }
 
     public void acceptTerminal(int symbol) throws IOException, CompilationException {
-        while (nextToken.symbol != symbol) {
-            nextToken = lex.getNextToken();
-            if (nextToken == null) return;
+        if (nextToken == null) {
+            myGenerate.reportError(null, "unexpected end of file");
         }
-
-        Token token = new Token(symbol, Token.getName(symbol), nextToken.lineNumber);
-
-        myGenerate.insertToken(token);
+        else if (nextToken.symbol == symbol) {
+            myGenerate.insertToken(nextToken);
+            nextToken = lex.getNextToken();
+        }
+        else {
+            myGenerate.reportError(nextToken, "unexpected symbol '"
+                    + Token.getName(nextToken.symbol) + "', expected " + Token.getName(symbol));
+        }
     }
 
     private boolean IsReservedWord(String word) {

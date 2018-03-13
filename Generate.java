@@ -3,6 +3,7 @@ import java.util.Stack;
 
 public class Generate extends AbstractGenerate {
     public int indent;
+    public String filename;
     private Stack<String> nonterminals;
 
     public Generate() {
@@ -50,12 +51,22 @@ public class Generate extends AbstractGenerate {
 
     public void reportError(Token token, String message) throws CompilationException {
         String final_message = "";
-        if (token != null)
-            final_message = "\"Error: " + message + " at line " + token.lineNumber + "\"";
+        /*if (token != null)
+            final_message = "\"Error: " + message + " at line " + token.lineNumber + " (" + filename + ")\"";
         else
-            final_message = "\"Error: " + message + "\"";
+            final_message = "\"Error: " + message + " (" + filename + ")\"";
+*/
+        if (token != null)
+            final_message = filename + ":" + token.lineNumber + ": \"Error: " + message + "\"";
+        else
+            final_message = filename + ": \"Error: " + message + "\"";
 
-        throw new CompilationException(final_message);
+        CompilationException trace = new CompilationException(final_message);
+        while (!nonterminals.isEmpty()) {
+            trace = new CompilationException(nonterminals.pop(), trace);
+        }
+
+        throw trace;
     }
 
     public void Reset() {
