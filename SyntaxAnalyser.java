@@ -2,6 +2,10 @@ import java.io.IOException;
 import java.io.File;
 import java.util.ArrayList;
 
+/**
+  Analyses the syntax of the given program
+  @author James Bulman
+ */
 public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
 
     private String filename;
@@ -403,7 +407,7 @@ public class SyntaxAnalyser extends AbstractSyntaxAnalyser {
         }
         else if (nextToken.symbol == symbol) {
             // If the symbol matches that of nextToken then insert it and move nextToken to the next available
-            myGenerate.insertToken(nextToken);
+            myGenerate.insertTerminal(nextToken);
             nextToken = lex.getNextToken();
         }
         else {

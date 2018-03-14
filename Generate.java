@@ -1,6 +1,10 @@
 import java.io.IOException;
 import java.util.Stack;
 
+/**
+  Prints out the information about the prase tree
+  @author James Bulman
+ */
 public class Generate extends AbstractGenerate {
 
     // The amount to indent printing by
@@ -18,65 +22,37 @@ public class Generate extends AbstractGenerate {
     }
 
     /**
-      Inserts the given token into the parse tree
-      @param token The token to insert into the parse tree
+      Inserts a token into the parse tree with the correct indentation
+      @param token The token to insert
      */
-    public void insertToken(Token token) {
-        // Indents by the current indent amount
+    public void insertTerminal(Token token) {
+        // Print spaces for indentation
         for (int i = 0; i < indent; i++) { System.out.print(" "); }
-
-        switch (token.symbol) {
-            // If the token is an identifier, number or string print out its value as well as its name
-            // and line number
-            case Token.identifier:
-            case Token.numberConstant:
-            case Token.stringConstant: {
-                System.out.println("rggTOKEN " + Token.getName(token.symbol) + " '"
-                        + token.text + "' on line " + token.lineNumber);
-            }
-            break;
-            // Otherwise, just print the name of the token and the line number
-            default: {
-                System.out.println("rggTOKEN " +
-                        Token.getName(token.symbol) + " on line " + token.lineNumber);
-            }
-            break;
-        }
+        super.insertTerminal(token);
     }
 
     /**
-      Starts the given non-terminal and pushes it onto the process stack
-      @param nonterminal The non-terminal to begin
+      Commences a non-terminal in the parse tree with correct indentation
+      @param name The name of the non-terminal to commence
      */
-    public void commenceNonterminal(String nonterminal) {
-        // Indents by the current indent amount
-        for (int i = 0; i < indent; i++) { System.out.print(" "); }
-
-        // Begins the non-terminal and pushes it to the processing stack
-        System.out.println("rggBEGIN " + nonterminal);
-        nonterminals.push(nonterminal);
-
-        // Increments the indent by 4 spaces
+    public void commenceNonterminal(String name) {
+        // Move the indentation 4 spaces in
         indent += 4;
-    }
-
-    /**
-      Finishes the given non-terminal and pops the top non-terminal from the processing stack<br/>
-      The non-terminal popped off the processing stack should be equal to the non-terminal given
-      @param nonterminal The non-terminal to finish
-     */
-    public void finishNonterminal(String nonterminal) {
-        indent -= 4;
+        // Print the spaces for indentation
         for (int i = 0; i < indent; i++) { System.out.print(" "); }
-        System.out.println("rggEND " + nonterminal);
-        nonterminals.pop();
+        super.commenceNonterminal(name);
     }
 
     /**
-      Reports success to the parser
+      Finishes the non-terminal given with correct indentation
+      @param name The name of the non-terminal to finish
      */
-    public void reportSuccess() {
-        System.out.println("rggSUCCESS");
+    public void finishNonterminal(String name) {
+        // Print the spaces for indentation
+        for (int i = 0; i < indent; i++) { System.out.print(" "); }
+        super.finishNonterminal(name);
+        // Move the indentation 4 spaces out
+        indent -= 4;
     }
 
     /**
