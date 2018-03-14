@@ -27,7 +27,7 @@ public class Generate extends AbstractGenerate {
      */
     public void insertTerminal(Token token) {
         // Print spaces for indentation
-        for (int i = 0; i < indent; i++) { System.out.print(" "); }
+        for (int i = 0; i < indent; i++) { System.out.print("\t"); }
         super.insertTerminal(token);
     }
 
@@ -36,10 +36,10 @@ public class Generate extends AbstractGenerate {
       @param name The name of the non-terminal to commence
      */
     public void commenceNonterminal(String name) {
-        // Move the indentation 4 spaces in
-        indent += 4;
         // Print the spaces for indentation
-        for (int i = 0; i < indent; i++) { System.out.print(" "); }
+        for (int i = 0; i < indent; i++) { System.out.print("\t"); }
+        // Move the indentation 4 spaces in
+        indent += 1;
         super.commenceNonterminal(name);
     }
 
@@ -48,11 +48,11 @@ public class Generate extends AbstractGenerate {
       @param name The name of the non-terminal to finish
      */
     public void finishNonterminal(String name) {
-        // Print the spaces for indentation
-        for (int i = 0; i < indent; i++) { System.out.print(" "); }
-        super.finishNonterminal(name);
         // Move the indentation 4 spaces out
-        indent -= 4;
+        indent -= 1;
+        // Print the spaces for indentation
+        for (int i = 0; i < indent; i++) { System.out.print("\t"); }
+        super.finishNonterminal(name);
     }
 
     /**
